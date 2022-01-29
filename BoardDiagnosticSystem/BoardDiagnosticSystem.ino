@@ -3,9 +3,12 @@
 #include "KWP.h"
 
 #pragma region Timers
-long timer1 = 0;
-long timer2 = 0;
-long timer3 = 0;
+unsigned long loopTimer = 0;
+unsigned long engineTimer = 0;
+unsigned long dashboardTimer = 0;
+unsigned long wireTransferTimer = 0;
+long dashboardPeriod = 10000;
+long wireTransferPeriod = 500;
 #pragma endregion
 
 #pragma region Diagnostic vars
@@ -17,15 +20,15 @@ KWP kwp(pinKLineRX, pinKLineTX);
 
 //---Diagnostics---//
 #define MAX_CONNECT_RETRIES 5
-#define NENGINEGROUPS 3
-#define NDASHBOARDGROUPS 2
+#define NENGINEGROUPS 4
+#define NDASHBOARDGROUPS 1
 #define NMODULES 2
-int engineGroups[NENGINEGROUPS] = {2, 3, 20};
-int dashboardGroups[NDASHBOARDGROUPS] = {1, 3};
+int engineGroups[NENGINEGROUPS] = {1, 2, 4, 16};
+int dashboardGroups[NDASHBOARDGROUPS] = {3};
 
 KWP_MODULE engine = {"ECU", ADR_Engine, 10400, engineGroups, NENGINEGROUPS};
 KWP_MODULE dashboard = {"DASHBOARD", ADR_Dashboard, 10400, dashboardGroups, NDASHBOARDGROUPS};
-KWP_MODULE *modules[NMODULES] = {&dashboard, &engine};
+KWP_MODULE *modules[NMODULES] = {&engine, &dashboard};
 
 KWP_MODULE *currentModule = modules[0];
 int currentGroup = 0;
@@ -45,17 +48,18 @@ EasyTransferI2C ET;
 //define slave i2c address
 #define I2C_SLAVE_ADDRESS 9
 
-//sample data structure. To be changed
 struct SEND_DATA_STRUCTURE
 {
-  //put your variable definitions here for the data you want to send
-  //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
-  int16_t blinks;
-  int16_t pause;
+  bool connectionStatus = false;
+  String oilTemp = "";
+  String coolantTemp = "";
+  String MAF = "";
+  String misfireCounter = "";
+  String batteryVoltage = "";
 };
 
 //give a name to the group of data
-SEND_DATA_STRUCTURE mydata;
+SEND_DATA_STRUCTURE wireData;
 #pragma endregion
 
 void setup()
@@ -66,8 +70,14 @@ void setup()
 
 void loop()
 {
+  Serial.print("Loop elapsed: ");
+  Serial.println(millis() - loopTimer);
+  loopTimer = millis();
+
   manageWireTransfer();
   manageDiagnostic();
+
+  //showWireDataToSerial();
 }
 
 #pragma region Diagnostic Handlers
@@ -126,7 +136,34 @@ void setupDiagnostic()
 
 void manageDiagnostic()
 {
-  if (!kwp.isConnected())
+  if (millis() - dashboardTimer > dashboardPeriod)
+  {
+    currentModule = modules[1];
+    kwp.disconnect();
+  }
+  if (kwp.isConnected())
+  {
+    if (currentModule->name == "ECU")
+    {
+      SENSOR resultBlock[maxSensors];
+      kwp.readBlock(currentModule->addr, currentModule->groups[1], maxSensors, resultBlock);
+      wireData.coolantTemp = resultBlock[1].value;
+      kwp.readBlock(currentModule->addr, currentModule->groups[2], maxSensors, resultBlock);
+      wireData.MAF = resultBlock[3].value;
+      kwp.readBlock(currentModule->addr, currentModule->groups[16], maxSensors, resultBlock);
+      wireData.misfireCounter = resultBlock[0].value;
+      kwp.readBlock(currentModule->addr, currentModule->groups[51], maxSensors, resultBlock);
+      wireData.batteryVoltage = resultBlock[3].value;
+    }
+    else if (currentModule->name == "DASHBOARD")
+    {
+      SENSOR resultBlock[maxSensors];
+      kwp.readBlock(currentModule->addr, currentModule->groups[3], maxSensors, resultBlock);
+      wireData.oilTemp = resultBlock[2].value;
+      dashboardTimer = millis();
+    }
+  }
+  else
   {
     digitalWrite(LED_BUILTIN, LOW);
     Serial.println("Starting " + currentModule->name);
@@ -144,9 +181,12 @@ void manageDiagnostic()
       {
         Serial.println("Connection retry " + String(connRetries) + "... Module addr " + String(currentModule->addr));
         if (currentModule->addr == ADR_Dashboard)
-          currentModule = modules[1];
-        else
+        {
+          dashboardTimer = millis();
           currentModule = modules[0];
+        }
+        else
+          currentModule = modules[1];
         currentGroup = 0;
         currentSensor = 0;
         nSensors = 0;
@@ -154,31 +194,6 @@ void manageDiagnostic()
       }
       else
         connRetries++;
-    }
-  }
-  else
-  {
-    digitalWrite(LED_BUILTIN, HIGH);
-    SENSOR resultBlock[maxSensors];
-    nSensors = kwp.readBlock(currentModule->addr, currentModule->groups[currentGroup], maxSensors, resultBlock);
-    if (resultBlock[currentSensor].value != "")
-    {
-      //LCD.showText(resultBlock[currentSensor].desc, resultBlock[currentSensor].value+" "+resultBlock[currentSensor].units);
-      digitalWrite(LED_BUILTIN, HIGH);
-      Serial.println(resultBlock[currentSensor].desc);
-      Serial.println(resultBlock[currentSensor].value + " " + resultBlock[currentSensor].units);
-      if (count > 8)
-      {
-        refreshParams(1);
-        count = 0;
-      }
-      else
-        count++;
-    }
-    else
-    {
-      refreshParams(1);
-      count = 0;
     }
   }
 }
@@ -191,7 +206,7 @@ void setupWireTransfer()
 {
   Wire.begin();
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
-  ET.begin(details(mydata), &Wire);
+  ET.begin(details(wireData), &Wire);
 
   pinMode(13, OUTPUT);
 
@@ -200,21 +215,32 @@ void setupWireTransfer()
 
 void manageWireTransfer()
 {
-  //this is how you access the variables. [name of the group].[variable name]
-  mydata.blinks = random(5);
-  mydata.pause = random(5);
-  //send the data
-  ET.sendData(I2C_SLAVE_ADDRESS);
-
-  //Just for fun, we will blink it out too
-  for (int i = mydata.blinks; i > 0; i--)
+  wireTransferTimer = millis();
+  while (millis() < wireTransferTimer + wireTransferPeriod)
   {
-    digitalWrite(13, HIGH);
-    delay(mydata.pause * 100);
-    digitalWrite(13, LOW);
-    delay(mydata.pause * 100);
+    //send the data
+    ET.sendData(I2C_SLAVE_ADDRESS);
+    Serial.println("Wire Transfer in progress");
   }
-  delay(5000);
 }
 //
 #pragma endregion
+
+void showWireDataToSerial()
+{
+  Serial.print("Oil temp: ");
+  Serial.print(wireData.oilTemp);
+  Serial.println();
+  Serial.print("Coolant temp: ");
+  Serial.print(wireData.coolantTemp);
+  Serial.println();
+  Serial.print("MAF: ");
+  Serial.print(wireData.MAF);
+  Serial.println();
+  Serial.print("Misfires: ");
+  Serial.print(wireData.misfireCounter);
+  Serial.println();
+  Serial.print("Batt voltage: ");
+  Serial.print(wireData.batteryVoltage);
+  Serial.println();
+}
