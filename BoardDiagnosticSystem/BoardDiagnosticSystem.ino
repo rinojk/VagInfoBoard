@@ -3,8 +3,6 @@
 struct DIAG_DATA_STRUCTURE{
   //put your variable definitions here for the data you want to send
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
-  int16_t blinks;
-  int16_t pause;
   int16_t connectionStatus = 0;
   int16_t oilTemp = 0;
   int16_t coolantTemp = 0;
