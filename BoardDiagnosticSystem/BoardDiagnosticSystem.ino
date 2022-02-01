@@ -9,8 +9,12 @@ struct SEND_DATA_STRUCTURE{
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t blinks;
   int16_t pause;
-  int16_t t = 10;
-  int16_t a = 7.62*100;
+  int16_t connectionStatus = 1;
+  int16_t oilTemp = 89;
+  int16_t coolantTemp = 93;
+  int16_t MAF = 2685;
+  int16_t misfireCounter = 3;
+  int16_t batteryVoltage = 1387;
 };
 
 //give a name to the group of data
@@ -50,5 +54,6 @@ void loop(){
 }
 
 void showData(){
-  Serial.println(mydata.t);
+  Serial.println(mydata.oilTemp);
+  Serial.println(mydata.batteryVoltage/100.0);
 }

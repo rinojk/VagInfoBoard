@@ -5,12 +5,16 @@
 EasyTransferI2C ET; 
 
 struct RECEIVE_DATA_STRUCTURE{
-  //put your variable definitions here for the data you want to receive
+  //put your variable definitions here for the data you want to send
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t blinks;
   int16_t pause;
-  int16_t t = 0;
-  int16_t a = 1.92;
+  int16_t connectionStatus = 0;
+  int16_t oilTemp = 0;
+  int16_t coolantTemp = 0;
+  int16_t MAF = 0;
+  int16_t misfireCounter = 0;
+  int16_t batteryVoltage = 0;
 };
 
 //give a name to the group of data
@@ -21,6 +25,7 @@ RECEIVE_DATA_STRUCTURE mydata;
 
 void setup(){
   Wire.begin(I2C_SLAVE_ADDRESS);
+  Serial.begin(115200);
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc. 
   ET.begin(details(mydata), &Wire);
   //define handler function on receiving data
@@ -48,5 +53,11 @@ void loop() {
 void receive(int numBytes) {}
 
 void showData(){
-  Serial.println(mydata.t);
+  Serial.println("DATA RECEIVED:");
+  Serial.println(mydata.connectionStatus);
+  Serial.println(mydata.oilTemp);
+  Serial.println(mydata.coolantTemp);
+  Serial.println(mydata.MAF/100.0);
+  Serial.println(mydata.misfireCounter);
+  Serial.println(mydata.batteryVoltage/100.0);
 }
