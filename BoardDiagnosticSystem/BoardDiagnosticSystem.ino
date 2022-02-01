@@ -1,59 +1,39 @@
 #include <Wire.h>
-#include <EasyTransferI2C.h>
 
-//create object
-EasyTransferI2C ET; 
-
-struct SEND_DATA_STRUCTURE{
+struct DIAG_DATA_STRUCTURE{
   //put your variable definitions here for the data you want to send
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t blinks;
   int16_t pause;
-  int16_t connectionStatus = 1;
-  int16_t oilTemp = 89;
-  int16_t coolantTemp = 93;
-  int16_t MAF = 2685;
-  int16_t misfireCounter = 3;
-  int16_t batteryVoltage = 1387;
+  int16_t connectionStatus = 0;
+  int16_t oilTemp = 0;
+  int16_t coolantTemp = 0;
+  int16_t MAF = 0;
+  int16_t misfireCounter = 0;
+  int16_t batteryVoltage = 0;
 };
 
 //give a name to the group of data
-SEND_DATA_STRUCTURE mydata;
+struct DIAG_DATA_STRUCTURE mydata;
 
-//define slave i2c address
-#define I2C_SLAVE_ADDRESS 9
-
-void setup(){
-  Wire.begin();
+void setup()
+{
   Serial.begin(115200);
-  //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
-  ET.begin(details(mydata), &Wire);
-  Serial.println();
-  pinMode(13, OUTPUT);
-  
-  randomSeed(analogRead(0));
-  
+  Wire.begin(9);                // join i2c bus with address #2
+  Wire.onRequest(requestEvent); // register event
 }
 
-void loop(){
-  //this is how you access the variables. [name of the group].[variable name]
-  mydata.blinks = random(5);
-  mydata.pause = random(5);
-  //send the data
-  ET.sendData(I2C_SLAVE_ADDRESS);
-  showData();
-  //Just for fun, we will blink it out too
-   for(int i = mydata.blinks; i>0; i--){
-      digitalWrite(13, LOW);
-      delay(mydata.pause * 100);
-      digitalWrite(13, HIGH);
-      delay(mydata.pause * 100);
-    }
-  
-  delay(500);
+void loop()
+{
+  delay(10);
 }
 
-void showData(){
-  Serial.println(mydata.oilTemp);
-  Serial.println(mydata.batteryVoltage/100.0);
+// function that executes whenever data is requested by master
+// this function is registered as an event, see setup()
+void requestEvent()
+{
+  Serial.println("Request came; DataStruct size:");
+  Serial.println(sizeof(&mydata));
+  Wire.write(17); // respond with message of 6 bytes
+                       // as expected by master
 }

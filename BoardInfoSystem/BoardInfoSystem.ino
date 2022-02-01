@@ -1,10 +1,18 @@
 #include <Wire.h>
-#include <EasyTransferI2C.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Fonts/FreeSans18pt7b.h>
 
-//create object
-EasyTransferI2C ET; 
+///
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-struct RECEIVE_DATA_STRUCTURE{
+const int buttonPin = 7;
+///
+
+struct DIAG_DATA_STRUCTURE{
   //put your variable definitions here for the data you want to send
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t blinks;
@@ -18,39 +26,27 @@ struct RECEIVE_DATA_STRUCTURE{
 };
 
 //give a name to the group of data
-RECEIVE_DATA_STRUCTURE mydata;
+DIAG_DATA_STRUCTURE mydata;
 
-//define slave i2c address
-#define I2C_SLAVE_ADDRESS 9
-
-void setup(){
-  Wire.begin(I2C_SLAVE_ADDRESS);
-  Serial.begin(115200);
-  //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc. 
-  ET.begin(details(mydata), &Wire);
-  //define handler function on receiving data
-  Wire.onReceive(receive);
-  
-  pinMode(13, OUTPUT);
-  
+void setup()
+{
+  Wire.begin();        // join i2c bus (address optional for master)
+  setupDisplay();
+  Serial.begin(115200);  // start serial for output
 }
 
-void loop() {
-  //check and see if a data packet has come in. 
-  if(ET.receiveData()){
-    //this is how you access the variables. [name of the group].[variable name]
-    //since we have data, we will blink it out. 
-    showData();
-    for(int i = mydata.blinks; i>0; i--){
-      digitalWrite(13, HIGH);
-      delay(mydata.pause * 100);
-      digitalWrite(13, LOW);
-      delay(mydata.pause * 100);
-    }
+void loop()
+{
+  Wire.requestFrom(9, 1);    // request 6 bytes from slave device #2
+  while(Wire.available())    // slave may send less than requested
+  { 
+    byte c = Wire.read(); // receive a byte as character
+    Serial.println(String(c)+" - "+String(millis()/1000.0));         // print the character
+    displayInfo(String(c)+"-"+String(millis()/1000.0));
   }
-}
 
-void receive(int numBytes) {}
+  delay(1000);
+}
 
 void showData(){
   Serial.println("DATA RECEIVED:");
@@ -60,4 +56,66 @@ void showData(){
   Serial.println(mydata.MAF/100.0);
   Serial.println(mydata.misfireCounter);
   Serial.println(mydata.batteryVoltage/100.0);
+}
+
+#pragma region Display
+//-----------------------Display Module------------------------------//
+void setupDisplay()
+{
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
+    Serial.println("SSD1306 allocation failed");
+    for (;;)
+      ;
+  }
+  //display.setFont(&FreeMono9pt7b);
+  display.setTextSize(1);
+  display.setRotation(2);
+  display.setTextColor(WHITE);
+  display.cp437(true);
+  displayInfo("HELLO WRLD!");
+}
+
+void displayInfo(String text)
+{
+  display.clearDisplay();
+
+  display.setFont();
+  display.setTextSize(2);
+  display.setCursor(0, 0);
+  display.println(text);
+  display.display();
+}
+
+void displayInfo(String text1, String text2, String text3, String mainText, bool warning)
+{
+  display.clearDisplay();
+
+  display.setFont();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println(text1);
+  display.println(text2);
+
+  display.setTextSize(2);
+  display.println(text3);
+
+  display.setFont(&FreeSans18pt7b);
+  display.setTextSize(1);
+  int shift = 24;
+  display.setCursor(69, shift);
+  display.println(mainText);
+
+  if (warning)
+  {
+    display.setFont();
+    display.setTextSize(4);
+    display.setCursor(54, 0);
+    display.print("!");
+  }
+  display.display();
+}
+#pragma endregion
+void convertByteArrayToStructure(){
+
 }
