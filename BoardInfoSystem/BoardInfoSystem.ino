@@ -92,7 +92,7 @@ DIAG_DATA_STRUCTURE mydata;
 // You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
 struct SLAVE_DATA
 {
-  int16_t sensor; // use specific declarations to ensure communication between 16bit and 32bit controllers
+  int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
   int16_t connectionStatus = 0;
   int16_t oilTemp = 0;
   int16_t coolantTemp = 0;
@@ -126,13 +126,13 @@ void loop()
   }
   showData();
   displayInfo(String(String(slave_data.sensor)+" "+String(slave_data.oilTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage),false);
-  if (slave_data.sensor == 100)
-  {
+  //if (slave_data.sensor == 100)
+  //{
     slave_config.val = 100;
     Wire.beginTransmission(i2c_sensor_slave);
     i2cSimpleWrite(slave_config);
     Wire.endTransmission();
-  }
+  //}
 
   delay(500);
 }

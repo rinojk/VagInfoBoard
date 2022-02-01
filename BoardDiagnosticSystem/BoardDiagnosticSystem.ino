@@ -20,7 +20,7 @@
 // You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
 struct SLAVE_DATA
 {
-    int16_t sensor; // use specific declarations to ensure communication between 16bit and 32bit controllers
+    int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
     int16_t connectionStatus = 1;
     int16_t oilTemp = 89;
     int16_t coolantTemp = 90;
@@ -52,7 +52,7 @@ void loop()
 void requestEvent()
 {
     i2cSimpleWrite(slave_data);            // Send the Master the sensor data
-    slave_data.sensor += slave_config.val; // Simulate updated sensor data
+    //slave_data.sensor += slave_config.val; // Simulate updated sensor data
 }
 
 void receiveEvent(int payload)
