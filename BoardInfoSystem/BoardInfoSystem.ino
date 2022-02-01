@@ -2,6 +2,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans18pt7b.h>
+#include "i2cSimpleTransfer.h"
 
 #pragma region Display
 ///
@@ -10,8 +11,6 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 ///
-
-
 
 //-----------------------Display Module------------------------------//
 void setupDisplay()
@@ -71,7 +70,8 @@ void displayInfo(String text1, String text2, String text3, String mainText, bool
 }
 #pragma endregion
 
-struct DIAG_DATA_STRUCTURE{
+struct DIAG_DATA_STRUCTURE
+{
   //put your variable definitions here for the data you want to send
   //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
   int16_t blinks;
@@ -87,36 +87,62 @@ struct DIAG_DATA_STRUCTURE{
 //give a name to the group of data
 DIAG_DATA_STRUCTURE mydata;
 
+#define i2c_sensor_slave 17
+
+// You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
+struct SLAVE_DATA
+{
+  uint16_t sensor; // use specific declarations to ensure communication between 16bit and 32bit controllers
+  uint16_t oilTemp = 0;
+};
+
+struct SLAVE_CONFIG
+{
+  uint8_t val; // use specific declarations to ensure communication between 16bit and 32bit controllers
+};
+
+SLAVE_DATA slave_data;
+SLAVE_CONFIG slave_config;
+
 void setup()
 {
-  Wire.begin();        // join i2c bus (address optional for master)
+  Wire.begin(); // join i2c bus (address optional for master)
   setupDisplay();
-  Serial.begin(115200);  // start serial for output
+  Serial.begin(115200); // start serial for output
 }
 
 void loop()
 {
-  Wire.requestFrom(9, 1);    // request 6 bytes from slave device #2
-  while(Wire.available())    // slave may send less than requested
-  { 
-    byte c = Wire.read(); // receive a byte as character
-    Serial.println(String(c)+" - "+String(millis()/1000.0));         // print the character
-    displayInfo(String(c)+"-"+String(millis()/1000.0));
+  Wire.requestFrom(i2c_sensor_slave, sizeof(slave_data)); // request data from the Slave device the size of our struct
+
+  if (Wire.available() == sizeof(slave_data))
+  {
+    i2cSimpleRead(slave_data);
+  }
+  Serial.println(String(slave_data.sensor)+" "+String(slave_data.oilTemp));
+  displayInfo(String(String(slave_data.sensor)+" "+String(slave_data.oilTemp)));
+  if (slave_data.sensor == 100)
+  {
+    slave_config.val = 100;
+    Wire.beginTransmission(i2c_sensor_slave);
+    i2cSimpleWrite(slave_config);
+    Wire.endTransmission();
   }
 
-  delay(1000);
+  delay(500);
 }
 
-void showData(){
+void showData()
+{
   Serial.println("DATA RECEIVED:");
   Serial.println(mydata.connectionStatus);
   Serial.println(mydata.oilTemp);
   Serial.println(mydata.coolantTemp);
-  Serial.println(mydata.MAF/100.0);
+  Serial.println(mydata.MAF / 100.0);
   Serial.println(mydata.misfireCounter);
-  Serial.println(mydata.batteryVoltage/100.0);
+  Serial.println(mydata.batteryVoltage / 100.0);
 }
 
-void convertByteArrayToStructure(){
-
+void convertByteArrayToStructure()
+{
 }
