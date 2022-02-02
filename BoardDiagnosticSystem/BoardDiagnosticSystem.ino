@@ -10,12 +10,12 @@
 struct SLAVE_DATA
 {
     int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
-    int16_t connectionStatus = 1;
-    int16_t oilTemp = 89;
-    int16_t coolantTemp = 90;
-    int16_t MAF = 91;
-    int16_t misfireCounter = 92;
-    int16_t batteryVoltage = 93;
+    int16_t connectionStatus = 0;
+    int16_t oilTemp = -99;
+    int16_t coolantTemp = -99;
+    int16_t MAF = -99;
+    int16_t misfireCounter = -99;
+    int16_t batteryVoltage = -99;
 };
 
 struct SLAVE_CONFIG
@@ -34,9 +34,10 @@ void setupI2C()
 }
 void requestEvent()
 {
-    slave_data.oilTemp += 1;
-    slave_data.batteryVoltage += 2;
+    //slave_data.oilTemp += 1;
+    //slave_data.batteryVoltage += 2;
     i2cSimpleWrite(slave_data); // Send the Master the sensor data
+    //showWireDataToSerial();
     //slave_data.sensor += slave_config.val; // Simulate updated sensor data
 }
 
@@ -161,11 +162,7 @@ void setupDiagnostic()
 
 void manageDiagnostic()
 {
-    if (millis() - dashboardTimer > dashboardPeriod)
-    {
-        currentModule = modules[1];
-        kwp.disconnect();
-    }
+    
     if (kwp.isConnected())
     {
         if (currentModule->name == "ECU")
@@ -173,18 +170,38 @@ void manageDiagnostic()
             SENSOR resultBlock[maxSensors];
             kwp.readBlock(currentModule->addr, currentModule->groups[1], maxSensors, resultBlock);
             //wireData.coolantTemp = resultBlock[1].value;
+            Serial.println(resultBlock[1].value+" "+resultBlock[1].units+" "+resultBlock[1].desc);
+            if(resultBlock[1].value!=""){
+                slave_data.coolantTemp = (int)resultBlock[1].value.toFloat();
+            }
             kwp.readBlock(currentModule->addr, currentModule->groups[2], maxSensors, resultBlock);
             //wireData.MAF = resultBlock[3].value;
+            Serial.println(resultBlock[3].value+" "+resultBlock[3].units+" "+resultBlock[3].desc);
+            if(resultBlock[3].value!=""){
+                slave_data.MAF = (int)(resultBlock[3].value.toFloat()*100);
+            }
             kwp.readBlock(currentModule->addr, currentModule->groups[16], maxSensors, resultBlock);
             //wireData.misfireCounter = resultBlock[0].value;
+            Serial.println(resultBlock[0].value+" "+resultBlock[0].units+" "+resultBlock[0].desc);
+            if(resultBlock[0].value!=""){
+                slave_data.misfireCounter = (int)(resultBlock[0].value.toFloat());
+            }
             kwp.readBlock(currentModule->addr, currentModule->groups[51], maxSensors, resultBlock);
             //wireData.batteryVoltage = resultBlock[3].value;
+            Serial.println(resultBlock[3].value+" "+resultBlock[3].units+" "+resultBlock[3].desc);
+            if(resultBlock[3].value!=""){
+                slave_data.batteryVoltage = (int)(resultBlock[3].value.toFloat()*100);
+            }
         }
         else if (currentModule->name == "DASHBOARD")
         {
             SENSOR resultBlock[maxSensors];
-            kwp.readBlock(currentModule->addr, currentModule->groups[3], maxSensors, resultBlock);
+            kwp.readBlock(currentModule->addr, currentModule->groups[1], maxSensors, resultBlock);
             //wireData.oilTemp = resultBlock[2].value;
+            Serial.println(resultBlock[2].value+" "+resultBlock[2].units+" "+resultBlock[2].desc);
+            if(resultBlock[2].value!=""){
+                slave_data.oilTemp = (int)(resultBlock[2].value.toFloat());
+            }
             dashboardTimer = millis();
         }
     }

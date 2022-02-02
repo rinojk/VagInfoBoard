@@ -100,9 +100,10 @@ void manageWire()
   if (Wire.available() == sizeof(slave_data))
   {
     i2cSimpleRead(slave_data);
+    displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100.0)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
   }
   showData();
-  displayInfo(String(String(millis()/1000) + " " + String(slave_data.oilTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
+  //displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
 
   slave_config.val = 100;
   Wire.beginTransmission(i2c_sensor_slave);
