@@ -663,8 +663,8 @@ bool KWP::isConnected()
 
 void KWP::obdWrite(uint8_t data)
 {
-  Serial.println("WRITE");
-  Serial.println(data);
+  //Serial.println("WRITE");
+  //Serial.println(data);
   obd->write(data);
 }
 
@@ -675,7 +675,7 @@ uint8_t KWP::obdRead()
   {
     if (millis() >= timeout)
     {
-      Serial.println(F("ERROR: obdRead timeout"));
+      //Serial.println(F("ERROR: obdRead timeout"));
       disconnect();
       errorTimeout++;
       return 0;
@@ -690,7 +690,7 @@ uint8_t KWP::obdRead()
 
 bool KWP::KWP5BaudInit(uint8_t addr)
 {
-  Serial.println(F("---KWP 5 baud init"));
+  //Serial.println(F("---KWP 5 baud init"));
   //delay(3000);
   send5baud(addr);
   return true;
@@ -699,8 +699,8 @@ bool KWP::KWP5BaudInit(uint8_t addr)
 void KWP::send5baud(uint8_t data)
 {
 #define bitcount 10
-  Serial.print("send5baud(data) data: ");
-  Serial.println(data, HEX);
+  //Serial.print("send5baud(data) data: ");
+  //Serial.println(data, HEX);
   byte bits[bitcount];
   byte even = 1;
   byte bit;
@@ -746,23 +746,23 @@ void KWP::send5baud(uint8_t data)
     }
   }
   obd->flush();
-  Serial.println("send5baud() obd->flush()");
+  //Serial.println("send5baud() obd->flush()");
 }
 
 bool KWP::KWPSendBlock(char *s, int size)
 {
-  Serial.print(F("---KWPSend sz="));
-  Serial.print(size);
-  Serial.print(F(" blockCounter="));
-  Serial.println(blockCounter);
-  Serial.print(F("OUT:"));
+  //Serial.print(F("---KWPSend sz="));
+  //Serial.print(size);
+  //Serial.print(F(" blockCounter="));
+  //Serial.println(blockCounter);
+  //Serial.print(F("OUT:"));
   for (int i = 0; i < size; i++)
   {
     uint8_t data = s[i];
-    Serial.print(data, HEX);
-    Serial.print(" ");
+    //Serial.print(data, HEX);
+    //Serial.print(" ");
   }
-  Serial.println();
+  //Serial.println();
   for (int i = 0; i < size; i++)
   {
     uint8_t data = s[i];
@@ -772,7 +772,7 @@ bool KWP::KWPSendBlock(char *s, int size)
       uint8_t complement = obdRead();
       if (complement != (data ^ 0xFF))
       {
-        Serial.println(F("ERROR: invalid complement"));
+        //Serial.println(F("ERROR: invalid complement"));
         disconnect();
         errorData++;
         return false;
@@ -790,13 +790,13 @@ bool KWP::KWPReceiveBlock(char s[], int maxsize, int &size, bool init_delay)
   int recvcount = 0;
   if (size == 0)
     ackeachbyte = true;
-  Serial.print(F("---KWPReceive sz="));
-  Serial.print(size);
-  Serial.print(F(" blockCounter="));
-  Serial.println(blockCounter);
+  //Serial.print(F("---KWPReceive sz="));
+  //Serial.print(size);
+  //Serial.print(F(" blockCounter="));
+  //Serial.println(blockCounter);
   if (size > maxsize)
   {
-    Serial.println("ERROR: invalid maxsize");
+    //Serial.println("ERROR: invalid maxsize");
     return false;
   }
   unsigned long timeout = millis() + 4000; // TODO: This allows connect to different Modules
@@ -814,7 +814,7 @@ bool KWP::KWPReceiveBlock(char s[], int maxsize, int &size, bool init_delay)
         size = data + 1;
         if (size > maxsize)
         {
-          Serial.println("ERROR: invalid maxsize");
+          //Serial.println("ERROR: invalid maxsize");
           return false;
         }
       }
@@ -822,7 +822,7 @@ bool KWP::KWPReceiveBlock(char s[], int maxsize, int &size, bool init_delay)
       {
         if (data != blockCounter)
         {
-          Serial.println(F("ERROR: invalid blockCounter"));
+          //Serial.println(F("ERROR: invalid blockCounter"));
           disconnect();
           errorData++;
           return false;
@@ -836,30 +836,30 @@ bool KWP::KWPReceiveBlock(char s[], int maxsize, int &size, bool init_delay)
     }
     if (millis() >= timeout)
     {
-      Serial.println(F("ERROR: timeout"));
+      //Serial.println(F("ERROR: timeout"));
       disconnect();
       errorTimeout++;
       return false;
     }
   }
-  Serial.print(F("IN: sz="));
-  Serial.print(size);
-  Serial.print(F(" data="));
+  //Serial.print(F("IN: sz="));
+  //Serial.print(size);
+  //Serial.print(F(" data="));
   for (int i = 0; i < size; i++)
   {
     uint8_t data = s[i];
-    Serial.print(data, HEX);
-    Serial.print(F(" "));
+    //Serial.print(data, HEX);
+    //Serial.print(F(" "));
   }
-  Serial.println();
+  //Serial.println();
   blockCounter++;
   return true;
 }
 
 bool KWP::KWPSendAckBlock()
 {
-  Serial.print(F("---KWPSendAckBlock blockCounter="));
-  Serial.println(blockCounter);
+  //Serial.print(F("---KWPSendAckBlock blockCounter="));
+  //Serial.println(blockCounter);
   char buf[32];
   sprintf(buf, "\x03%c\x09\x03", blockCounter);
   return (KWPSendBlock(buf, 4));
@@ -867,7 +867,7 @@ bool KWP::KWPSendAckBlock()
 
 bool KWP::readConnectBlocks()
 {
-  Serial.println(F("------readconnectblocks"));
+  //Serial.println(F("------readconnectblocks"));
   String info;
   while (true)
   {
@@ -881,7 +881,7 @@ bool KWP::readConnectBlocks()
       break;
     if (s[2] != '\xF6')
     {
-      Serial.println(F("ERROR: unexpected answer"));
+      //Serial.println(F("ERROR: unexpected answer"));
       disconnect();
       errorData++;
       return false;
@@ -891,7 +891,7 @@ bool KWP::readConnectBlocks()
     if (!KWPSendAckBlock())
       return false;
   }
-  Serial.print("label=");
-  Serial.println(info);
+  //Serial.print("label=");
+  //Serial.println(info);
   return true;
 }
