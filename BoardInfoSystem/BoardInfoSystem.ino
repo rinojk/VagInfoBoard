@@ -82,7 +82,7 @@ struct SLAVE_DATA
   int16_t coolantTemp = 0;
   int16_t MAF = 0;
   int16_t misfireCounter = 0;
-  int16_t batteryVoltage = 0;
+  int16_t intakeAirTemp = 0;
 };
 
 struct SLAVE_CONFIG
@@ -100,7 +100,7 @@ void manageWire()
   if (Wire.available() == sizeof(slave_data))
   {
     i2cSimpleRead(slave_data);
-    displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100.0)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
+    displayInfo(String(String(millis()/1000) + " " + String(slave_data.intakeAirTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
   }
   showData();
   //displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
@@ -132,9 +132,9 @@ void showData()
   Serial.println(slave_data.connectionStatus);
   Serial.println(slave_data.oilTemp);
   Serial.println(slave_data.coolantTemp);
-  Serial.println(slave_data.MAF / 100.0);
+  Serial.println(slave_data.MAF);
   Serial.println(slave_data.misfireCounter);
-  Serial.println(slave_data.batteryVoltage / 100.0);
+  Serial.println(slave_data.intakeAirTemp);
 }
 
 void convertByteArrayToStructure()

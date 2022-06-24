@@ -13,9 +13,9 @@ struct SLAVE_DATA
     int16_t connectionStatus = 0;
     int16_t oilTemp = -99;
     int16_t coolantTemp = -99;
+    int16_t intakeAirTemp = -99;
     int16_t MAF = -99;
     int16_t misfireCounter = -99;
-    int16_t batteryVoltage = -99;
 };
 
 struct SLAVE_CONFIG
@@ -34,11 +34,11 @@ void setupI2C()
 }
 void requestEvent()
 {
-    //slave_data.oilTemp += 1;
-    //slave_data.batteryVoltage += 2;
+    // slave_data.oilTemp += 1;
+    // slave_data.batteryVoltage += 2;
     i2cSimpleWrite(slave_data); // Send the Master the sensor data
-    //showWireDataToSerial();
-    //slave_data.sensor += slave_config.val; // Simulate updated sensor data
+    // showWireDataToSerial();
+    // slave_data.sensor += slave_config.val; // Simulate updated sensor data
 }
 
 void receiveEvent(int payload)
@@ -71,11 +71,11 @@ KWP kwp(pinKLineRX, pinKLineTX);
 #define NENGINEGROUPS 4
 #define NDASHBOARDGROUPS 1
 #define NMODULES 2
-int engineGroups[NENGINEGROUPS] = {1, 2, 4, 16};
-int dashboardGroups[NDASHBOARDGROUPS] = {3};
+int engineGroups[NENGINEGROUPS] = {2, 3, 20, 31};
+int dashboardGroups[NDASHBOARDGROUPS] = {2};
 
 KWP_MODULE engine = {"ECU", ADR_Engine, 10400, engineGroups, NENGINEGROUPS};
-KWP_MODULE dashboard = {"DASHBOARD", ADR_Dashboard, 10400, dashboardGroups, NDASHBOARDGROUPS};
+KWP_MODULE dashboard = {"CLUSTER", ADR_Dashboard, 10400, dashboardGroups, NDASHBOARDGROUPS};
 KWP_MODULE *modules[NMODULES] = {&engine, &dashboard};
 
 KWP_MODULE *currentModule = modules[0];
@@ -103,14 +103,14 @@ void loop()
 
     manageDiagnostic();
 
-    //showWireDataToSerial();
+    // showWireDataToSerial();
 }
 
 #pragma region Diagnostic Handlers
-//Diagnostic handlers
-// 0 - Nothing
-// 1 - Up
-// 2 - Down
+// Diagnostic handlers
+//  0 - Nothing
+//  1 - Up
+//  2 - Down
 void refreshParams(int type)
 {
     if (type == 1)
@@ -157,78 +157,30 @@ void refreshParams(int type)
 
 void setupDiagnostic()
 {
-    bool result = kwp.connect(currentModule->addr, currentModule->baudrate);
+    //bool result = kwp.connect(currentModule->addr, currentModule->baudrate);
 }
 
 void manageDiagnostic()
 {
     
-    if (kwp.isConnected())
+    if (!kwp.isConnected())
     {
-        if (currentModule->name == "ECU")
-        {
-            SENSOR resultBlock[maxSensors];
-            kwp.readBlock(currentModule->addr, currentModule->groups[1], maxSensors, resultBlock);
-            //wireData.coolantTemp = resultBlock[1].value;
-            Serial.println(resultBlock[1].value+" "+resultBlock[1].units+" "+resultBlock[1].desc);
-            if(resultBlock[1].value!=""){
-                slave_data.coolantTemp = (int)resultBlock[1].value.toFloat();
-            }
-            kwp.readBlock(currentModule->addr, currentModule->groups[2], maxSensors, resultBlock);
-            //wireData.MAF = resultBlock[3].value;
-            Serial.println(resultBlock[3].value+" "+resultBlock[3].units+" "+resultBlock[3].desc);
-            if(resultBlock[3].value!=""){
-                slave_data.MAF = (int)(resultBlock[3].value.toFloat()*100);
-            }
-            kwp.readBlock(currentModule->addr, currentModule->groups[16], maxSensors, resultBlock);
-            //wireData.misfireCounter = resultBlock[0].value;
-            Serial.println(resultBlock[0].value+" "+resultBlock[0].units+" "+resultBlock[0].desc);
-            if(resultBlock[0].value!=""){
-                slave_data.misfireCounter = (int)(resultBlock[0].value.toFloat());
-            }
-            kwp.readBlock(currentModule->addr, currentModule->groups[51], maxSensors, resultBlock);
-            //wireData.batteryVoltage = resultBlock[3].value;
-            Serial.println(resultBlock[3].value+" "+resultBlock[3].units+" "+resultBlock[3].desc);
-            if(resultBlock[3].value!=""){
-                slave_data.batteryVoltage = (int)(resultBlock[3].value.toFloat()*100);
-            }
-        }
-        else if (currentModule->name == "DASHBOARD")
-        {
-            SENSOR resultBlock[maxSensors];
-            kwp.readBlock(currentModule->addr, currentModule->groups[1], maxSensors, resultBlock);
-            //wireData.oilTemp = resultBlock[2].value;
-            Serial.println(resultBlock[2].value+" "+resultBlock[2].units+" "+resultBlock[2].desc);
-            if(resultBlock[2].value!=""){
-                slave_data.oilTemp = (int)(resultBlock[2].value.toFloat());
-            }
-            dashboardTimer = millis();
-        }
-    }
-    else
-    {
-        digitalWrite(LED_BUILTIN, LOW);
         Serial.println("Starting " + currentModule->name);
         if (kwp.connect(currentModule->addr, currentModule->baudrate))
         {
             Serial.println("Con. OK! Reading...");
             connRetries = 0;
-            digitalWrite(LED_BUILTIN, HIGH);
         }
         else
         { // Antiblocking
             Serial.println("KWP not connected");
-            digitalWrite(LED_BUILTIN, LOW);
             if (connRetries > MAX_CONNECT_RETRIES)
             {
                 Serial.println("Connection retry " + String(connRetries) + "... Module addr " + String(currentModule->addr));
                 if (currentModule->addr == ADR_Dashboard)
-                {
-                    dashboardTimer = millis();
-                    currentModule = modules[0];
-                }
-                else
                     currentModule = modules[1];
+                else
+                    currentModule = modules[0];
                 currentGroup = 0;
                 currentSensor = 0;
                 nSensors = 0;
@@ -236,6 +188,29 @@ void manageDiagnostic()
             }
             else
                 connRetries++;
+        }
+    }
+    else
+    {
+        SENSOR resultBlock[maxSensors];
+        nSensors = kwp.readBlock(currentModule->addr, currentModule->groups[currentGroup], maxSensors, resultBlock);
+        if (resultBlock[currentSensor].value != "")
+        {
+            // LCD.showText(resultBlock[currentSensor].desc, resultBlock[currentSensor].value+" "+resultBlock[currentSensor].units);
+            Serial.println(resultBlock[currentSensor].desc);
+            Serial.println(resultBlock[currentSensor].value + " " + resultBlock[currentSensor].units);
+            if (count > 8)
+            {
+                refreshParams(1);
+                count = 0;
+            }
+            else
+                count++;
+        }
+        else
+        {
+            refreshParams(1);
+            count = 0;
         }
     }
 }
@@ -256,7 +231,7 @@ void showWireDataToSerial()
     Serial.print("Misfires: ");
     Serial.print(slave_data.misfireCounter);
     Serial.println();
-    Serial.print("Batt voltage: ");
-    Serial.print(slave_data.batteryVoltage);
+    Serial.print("Intake Air Temp: ");
+    Serial.print(slave_data.intakeAirTemp);
     Serial.println();
 }
