@@ -12,6 +12,8 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 ///
 
+byte currentScreenType = 1;
+
 //-----------------------Display Module------------------------------//
 void setupDisplay()
 {
@@ -26,7 +28,7 @@ void setupDisplay()
   display.setRotation(2);
   display.setTextColor(WHITE);
   display.cp437(true);
-  displayInfo("HELLO WRLD!");
+  displayInfo("VAG:KWP1281");
 }
 
 void displayInfo(String text)
@@ -68,6 +70,19 @@ void displayInfo(String text1, String text2, String text3, String mainText, bool
   }
   display.display();
 }
+
+void renderScreen(){
+  if(currentScreenType == 1){
+
+  }
+  else if(currentScreenType == 2){
+
+  }
+  else if(currentScreenType == 3){
+    
+  }
+}
+
 #pragma endregion
 
 #pragma region I2C Master managing
@@ -76,7 +91,14 @@ void displayInfo(String text1, String text2, String text3, String mainText, bool
 // You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
 struct SLAVE_DATA
 {
+  //TO BE RENAMED TO diagConnectionStatus
+  // 0: not connected
+  // 1: connected to ECU
+  // 2: connected to DASH
   int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
+  //TO BE RENAMED TO bridgeConnectionStatus
+  // 0: not connected
+  // 1: connected
   int16_t connectionStatus = 0;
   int16_t oilTemp = 0;
   int16_t coolantTemp = 0;
@@ -102,7 +124,7 @@ void manageWire()
     i2cSimpleRead(slave_data);
     displayInfo(String(String(millis()/1000) + " " + String(slave_data.intakeAirTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
   }
-  showData();
+  printDataToSerial();
   //displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
 
   slave_config.val = 100;
@@ -126,7 +148,7 @@ void loop()
   delay(500);
 }
 
-void showData()
+void printDataToSerial()
 {
   Serial.println("DATA RECEIVED:");
   Serial.println(slave_data.connectionStatus);
@@ -139,4 +161,15 @@ void showData()
 
 void convertByteArrayToStructure()
 {
+}
+
+void switchDisplay(){
+  if(currentScreenType>3){
+    currentScreenType = 1;
+  }
+  else{
+    currentScreenType++;
+  }
+
+  renderScreen();
 }
