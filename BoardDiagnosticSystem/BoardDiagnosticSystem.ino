@@ -9,13 +9,20 @@
 // You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
 struct SLAVE_DATA
 {
-    int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
-    int16_t connectionStatus = 0;
-    int16_t oilTemp = -99;
-    int16_t coolantTemp = -99;
-    int16_t intakeAirTemp = -99;
-    int16_t MAF = -99;
-    int16_t misfireCounter = -99;
+  // TO BE RENAMED TO diagConnectionStatus
+  //  0: not connected
+  //  1: connected to ECU
+  //  2: connected to DASH
+  int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
+  // TO BE RENAMED TO bridgeConnectionStatus
+  //  0: not connected
+  //  1: connected
+  int16_t connectionStatus = 1;
+  int16_t oilTemp = 91;
+  int16_t coolantTemp = 92;
+  int16_t MAF = 0;
+  int16_t misfireCounter = 0;
+  int16_t intakeAirTemp = 93;
 };
 
 struct SLAVE_CONFIG
@@ -165,6 +172,7 @@ void manageDiagnostic()
     
     if (!kwp.isConnected())
     {
+        slave_data.connectionStatus=0;
         Serial.println("Starting " + currentModule->name);
         if (kwp.connect(currentModule->addr, currentModule->baudrate))
         {
@@ -192,11 +200,13 @@ void manageDiagnostic()
     }
     else
     {
+        slave_data.connectionStatus=1;
         SENSOR resultBlock[maxSensors];
         nSensors = kwp.readBlock(currentModule->addr, currentModule->groups[currentGroup], maxSensors, resultBlock);
         if (resultBlock[currentSensor].value != "")
         {
             // LCD.showText(resultBlock[currentSensor].desc, resultBlock[currentSensor].value+" "+resultBlock[currentSensor].units);
+            Serial.println("CurrentGroup: "+String(currentGroup)+"; CurrentSensor: "+String(currentSensor));
             Serial.println(resultBlock[currentSensor].desc);
             Serial.println(resultBlock[currentSensor].value + " " + resultBlock[currentSensor].units);
             if (count > 8)

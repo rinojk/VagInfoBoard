@@ -7,14 +7,14 @@
 // You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
 struct SLAVE_DATA
 {
-  //TO BE RENAMED TO diagConnectionStatus
-  // 0: not connected
-  // 1: connected to ECU
-  // 2: connected to DASH
+  // TO BE RENAMED TO diagConnectionStatus
+  //  0: not connected
+  //  1: connected to ECU
+  //  2: connected to DASH
   int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
-  //TO BE RENAMED TO bridgeConnectionStatus
-  // 0: not connected
-  // 1: connected
+  // TO BE RENAMED TO bridgeConnectionStatus
+  //  0: not connected
+  //  1: connected
   int16_t connectionStatus = 0;
   int16_t oilTemp = 0;
   int16_t coolantTemp = 0;
@@ -51,9 +51,9 @@ void setupDisplay()
     for (;;)
       ;
   }
-  //display.setFont(&FreeMono9pt7b);
+  // display.setFont(&FreeSans12pt7b);
   display.setTextSize(1);
-  //display.setRotation(2);
+  // display.setRotation(2);
   display.setTextColor(WHITE);
   display.cp437(true);
   displayInfo("VAG:KWP1281");
@@ -63,9 +63,9 @@ void displayInfo(String text)
 {
   display.clearDisplay();
 
-  display.setFont();
-  display.setTextSize(2);
-  display.setCursor(0, 0);
+  display.setFont(&FreeSans12pt7b);
+  display.setTextSize(1);
+  display.setCursor(0, 24);
   display.println(text);
   display.display();
 }
@@ -99,25 +99,30 @@ void displayInfo(String text1, String text2, String text3, String mainText, bool
   display.display();
 }
 
-void renderScreen(){
-  if(currentScreenType == 1){
+void renderScreen()
+{
+  if (currentScreenType == 1)
+  {
     renderScreen1();
   }
-  else if(currentScreenType == 2){
+  else if (currentScreenType == 2)
+  {
     renderScreen2();
   }
-  else if(currentScreenType == 3){
+  else if (currentScreenType == 3)
+  {
     renderScreen3();
   }
 }
 
-void renderScreen1(){
+void renderScreen1()
+{
   display.clearDisplay();
 
   display.setFont();
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.println("Conn: "+String(slave_data.connectionStatus));
+  display.println("Conn: " + String(slave_data.connectionStatus));
   display.println("Coolant");
   display.setTextSize(2);
   display.println(slave_data.coolantTemp);
@@ -126,40 +131,66 @@ void renderScreen1(){
   display.setTextSize(1);
   int shift = 24;
   display.setCursor(54, shift);
-  display.println("*"+String(slave_data.oilTemp));
+  display.println("*" + String(slave_data.oilTemp));
   display.display();
 }
 
-void renderScreen2(){
-  display.clearDisplay();
+void renderScreen2()
+{
 
+  display.clearDisplay();
+  display.drawLine(0, 33, 128, 33, WHITE);
+  display.drawLine(62, 0, 62, 64, WHITE);
   display.setFont();
   display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println("Int:123");//+String(slave_data.intakeAirTemp));
-  display.println("Oil temp");
-  display.setTextSize(2);
-  display.println(slave_data.oilTemp);
+  display.setCursor(8, 0);
+  display.print("Oil temp"); //+String(slave_data.intakeAirTemp));
+  display.setCursor(68, 0);
+  display.print("Cool temp");
+  display.setCursor(4, 36);
+  display.print("Int. temp");
+  display.setCursor(72, 36);
+  display.print("Battery");
+  // display.setTextSize(2);
 
-  display.setFont(&FreeSans12pt7b);
-  display.setTextSize(1);
-  int shift = 24;
-  display.setCursor(59, shift);
-  display.println("! 123");//+String(slave_data.coolantTemp));
+  if (slave_data.connectionStatus == 1)
+  {
+    display.setFont(&FreeSans12pt7b);
+    display.setCursor(12, 30);
+    display.print(slave_data.oilTemp);
+    display.setCursor(76, 30);
+    display.print(slave_data.coolantTemp);
+    display.setCursor(12, 62);
+    display.print(slave_data.intakeAirTemp);
+    display.setCursor(64, 62);
+    display.print(1385 / 100.0);
+  }
+  else if (slave_data.connectionStatus == 0)
+  {
+    display.setFont(&FreeSans12pt7b);
+    display.setCursor(12, 30);
+    display.print("---");
+    display.setCursor(76, 30);
+    display.print("---");
+    display.setCursor(12, 62);
+    display.print("---");
+    display.setCursor(74, 62);
+    display.print("--.--");
+  }
+  // display.setTextSize(1);
+  // int shift = 24;
+  // display.setCursor(59, shift);
+  // display.println("! 123");//+String(slave_data.coolantTemp));
   display.display();
 }
 
-void renderScreen3(){
-
+void renderScreen3()
+{
 }
 #pragma endregion
 
 #pragma region I2C Master managing
 #define i2c_sensor_slave 17
-
-
-
-
 
 void manageWire()
 {
@@ -168,11 +199,11 @@ void manageWire()
   if (Wire.available() == sizeof(slave_data))
   {
     i2cSimpleRead(slave_data);
-    //displayInfo(String(String(millis()/1000) + " " + String(slave_data.intakeAirTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
+    // displayInfo(String(String(millis()/1000) + " " + String(slave_data.intakeAirTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
     renderScreen();
   }
   printDataToSerial();
-  //displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
+  // displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
 
   slave_config.val = 100;
   Wire.beginTransmission(i2c_sensor_slave);
@@ -198,17 +229,23 @@ void loop()
 void printDataToSerial()
 {
   Serial.println("DATA RECEIVED:");
-  Serial.print("Status ");Serial.print(slave_data.connectionStatus);
+  Serial.print("Status ");
+  Serial.print(slave_data.connectionStatus);
   Serial.println();
-  Serial.print("Oil temp ");Serial.print(slave_data.oilTemp);
+  Serial.print("Oil temp ");
+  Serial.print(slave_data.oilTemp);
   Serial.println();
-  Serial.print("Coolant temp ");Serial.print(slave_data.coolantTemp);
+  Serial.print("Coolant temp ");
+  Serial.print(slave_data.coolantTemp);
   Serial.println();
-  Serial.print("MAF ");Serial.print(slave_data.MAF);
+  Serial.print("MAF ");
+  Serial.print(slave_data.MAF);
   Serial.println();
-  Serial.print("Misfires ");Serial.print(slave_data.misfireCounter);
+  Serial.print("Misfires ");
+  Serial.print(slave_data.misfireCounter);
   Serial.println();
-  Serial.print("Intake temp ");Serial.print(slave_data.intakeAirTemp);
+  Serial.print("Intake temp ");
+  Serial.print(slave_data.intakeAirTemp);
   Serial.println();
 }
 
@@ -216,11 +253,14 @@ void convertByteArrayToStructure()
 {
 }
 
-void switchDisplay(){
-  if(currentScreenType>3){
+void switchDisplay()
+{
+  if (currentScreenType > 3)
+  {
     currentScreenType = 1;
   }
-  else{
+  else
+  {
     currentScreenType++;
   }
 
