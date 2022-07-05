@@ -11,7 +11,7 @@ struct SLAVE_DATA
   //  0: not connected
   //  1: connected to ECU
   //  2: connected to DASH
-  int16_t sensor = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
+  int16_t diagConnectionStatus = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
   // TO BE RENAMED TO bridgeConnectionStatus
   //  0: not connected
   //  1: connected
@@ -21,6 +21,8 @@ struct SLAVE_DATA
   int16_t MAF = 0;
   int16_t misfireCounter = 0;
   int16_t intakeAirTemp = 0;
+  int16_t batteryVoltage = 0;
+  int16_t isEngineWorking = 0;
 };
 
 struct SLAVE_CONFIG
@@ -152,6 +154,8 @@ void renderScreen2()
   display.setCursor(72, 36);
   display.print("Battery");
   // display.setTextSize(2);
+  display.setCursor(46, 56);
+  display.print(String(slave_data.diagConnectionStatus)+String(slave_data.connectionStatus)+String(slave_data.isEngineWorking));
 
   if (slave_data.connectionStatus == 1)
   {
@@ -163,7 +167,7 @@ void renderScreen2()
     display.setCursor(12, 62);
     display.print(slave_data.intakeAirTemp);
     display.setCursor(64, 62);
-    display.print(1385 / 100.0);
+    display.print(slave_data.batteryVoltage / 100.0);
   }
   else if (slave_data.connectionStatus == 0)
   {
@@ -246,6 +250,10 @@ void printDataToSerial()
   Serial.println();
   Serial.print("Intake temp ");
   Serial.print(slave_data.intakeAirTemp);
+  Serial.print("Is engine working ");
+  Serial.print(slave_data.isEngineWorking);
+  Serial.print("Battery V ");
+  Serial.print(slave_data.batteryVoltage/100.0);
   Serial.println();
 }
 
