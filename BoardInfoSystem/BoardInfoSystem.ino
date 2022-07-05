@@ -3,6 +3,7 @@
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans12pt7b.h>
 #include "i2cSimpleTransfer.h"
+#include <EEPROM.h>
 
 // You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
 struct SLAVE_DATA
@@ -30,6 +31,19 @@ struct SLAVE_CONFIG
   uint8_t val; // use specific declarations to ensure communication between 16bit and 32bit controllers
 };
 
+struct BoardInfoSystemData
+{
+  uint16_t engineHours = 0;
+  uint16_t engineMinutes = 0;
+  uint8_t lastSelectedScreen = 2;
+};
+
+SLAVE_DATA slave_data;
+SLAVE_CONFIG slave_config;
+BoardInfoSystemData infoBoardData;
+
+byte currentScreenType = 2;
+
 #pragma region Display
 ///
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -38,11 +52,6 @@ struct SLAVE_CONFIG
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 ///
 
-SLAVE_DATA slave_data;
-SLAVE_CONFIG slave_config;
-
-byte currentScreenType = 2;
-int engineHrs = 0;
 
 //-----------------------Display Module------------------------------//
 void setupDisplay()
@@ -217,6 +226,21 @@ void manageWire()
 
 #pragma endregion
 
+#pragma region EEPROM
+byte eepromAddress = 0;
+void setupEEPROMData(){
+  
+}
+
+void updateData(){
+
+}
+
+void forceWriteData(){
+
+}
+#pragma endregion
+
 void setup()
 {
   Wire.begin(); // join i2c bus (address optional for master)
@@ -255,10 +279,6 @@ void printDataToSerial()
   Serial.print("Battery V ");
   Serial.print(slave_data.batteryVoltage/100.0);
   Serial.println();
-}
-
-void convertByteArrayToStructure()
-{
 }
 
 void switchDisplay()
