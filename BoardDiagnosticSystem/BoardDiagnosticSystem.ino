@@ -17,6 +17,9 @@ NOTE2: all serial debug communication commented out for live version, uncomment 
 #include <EEPROM.h>
 #include "NewSoftwareSerial.h"
 
+#include <Wire.h>
+#include "i2cSimpleTransfer.h"
+
 #define pinKLineRX 2 // white
 #define pinKLineTX 3 // orange
 //#define pinLED 9
@@ -75,6 +78,63 @@ uint8_t deltaV = 0;
 long deltaT = 0;
 const float distCorrVal = 1.03643724696; // correction value for distance counter: = realDistance/measuredDistance
 
+#pragma region I2Cmanaging
+#define i2c_slave_address 17
+
+// You can add more variables into the struct, but the default limit for transfer size in the Wire library is 32 bytes
+struct SLAVE_DATA
+{
+  // TO BE RENAMED TO diagConnectionStatus
+  //  0: not connected
+  //  1: connected to ECU
+  //  2: connected to DASH
+  int16_t diagConnectionStatus = 0; // use specific declarations to ensure communication between 16bit and 32bit controllers
+  // TO BE RENAMED TO bridgeConnectionStatus
+  //  0: not connected
+  //  1: connected
+  int16_t connectionStatus = 0;
+  int16_t oilTemp = 0;
+  int16_t coolantTemp = 0;
+  int16_t MAF = 0;
+  int16_t misfireCounter = 0;
+  int16_t intakeAirTemp = 0;
+  int16_t batteryVoltage = 0;
+  int16_t isEngineWorking = 0;
+};
+
+struct SLAVE_CONFIG
+{
+  uint8_t val; // use specific declarations to ensure communication between 16bit and 32bit controllers
+};
+
+SLAVE_DATA slave_data;
+SLAVE_CONFIG slave_config;
+void setupI2C()
+{
+  Wire.begin(i2c_slave_address); // i2c Slave address
+  Wire.onRequest(requestEvent);  // when the Master makes a request, run this function
+  Wire.onReceive(receiveEvent);  // when the Master sends us data, run this function
+  slave_config.val = 1;          // This is how much we increment after each request
+}
+void requestEvent()
+{
+  // slave_data.oilTemp += 1;
+  // slave_data.batteryVoltage += 2;
+  i2cSimpleWrite(slave_data); // Send the Master the sensor data
+                              // showWireDataToSerial();
+                              // slave_data.sensor += slave_config.val; // Simulate updated sensor data
+}
+
+void receiveEvent(int payload)
+{
+  if (payload == sizeof(slave_config))
+  {
+    i2cSimpleRead(slave_config); // Receive new data from the Master
+  }
+}
+#pragma endregion
+
+#pragma region KWP METHODS
 String floatToString(float v)
 {
   String res;
@@ -90,13 +150,6 @@ void disconnect()
   currAddr = 0;
 }
 
-/*
-void lcdPrint(int x, int y, String s, int width = 0) {
-  lcd.setCursor(x, y);
-  while (s.length() < width) s += " ";
-  lcd.print(s);
-}
-*/
 void obdWrite(uint8_t data)
 {
 #ifdef DEBUG
@@ -823,6 +876,7 @@ void alarm()
   //  noTone(pinBuzzer);
   //  alarmCounter++;
 }
+#pragma endregion
 
 void updateDisplay()
 {
@@ -838,17 +892,40 @@ void updateDisplay()
   Serial.println("OilTemp: " + String(oilTemp));
   Serial.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
 }
+void mapDataToI2C()
+{
+  if (currAddr == ADR_Engine)
+    slave_data.diagConnectionStatus = 1;
+  else if (currAddr == ADR_Dashboard)
+    slave_data.diagConnectionStatus = 2;
+  else
+    slave_data.diagConnectionStatus = 0;
+
+  if (connected == true)
+    slave_data.connectionStatus = 1;
+  else
+    slave_data.connectionStatus = 0;
+
+  slave_data.coolantTemp = coolantTemp;
+  slave_data.intakeAirTemp = intakeAirTemp;
+  slave_data.oilTemp = oilTemp;
+  slave_data.batteryVoltage = int(supplyVoltage * 100);
+  if(engineSpeed>700)
+    slave_data.isEngineWorking = 1;
+  else
+    slave_data.isEngineWorking = 0;
+}
 
 void setup()
 {
   Serial.begin(9600);
   // Serial.println(F("SETUP"));
-
-  char buff21[21];
+  setupI2C();
+  // char buff21[21];
 
   // EEPROM.write(vMaxAddr, 0);  // zero the eeprom value   for vMax
-  vMax = (int)EEPROM.read(vMaxAddr);
-  sprintf(buff21, "SETUP  --- vMax: %3d", vMax);
+  // vMax = (int)EEPROM.read(vMaxAddr);
+  // sprintf(buff21, "SETUP  --- vMax: %3d", vMax);
 
   pinMode(pinKLineTX, OUTPUT);
   digitalWrite(pinKLineTX, HIGH);
@@ -856,16 +933,18 @@ void setup()
   //  Serial.println(F("START"));
 }
 
-int block = 1;
+// 1 for ECU, 2 for DASH
+int currBlock = 1;
+int updateLoopsElapsed = 0;
 
 void loop()
 {
-  currPage = block;
   // errorTimeout = 0;
   // errorData = 0;
-  switch (currPage)
+  switch (currBlock)
   {
-  case 1:
+  case 2:
+    Serial.println("Accessing DASH");
     if (currAddr != ADR_Dashboard)
     {
       delay(1000);
@@ -876,11 +955,11 @@ void loop()
       readSensors(1);
       readSensors(2);
       readSensors(50);
-      block = 2;
     }
     break;
-  case 2:
-    if (currAddr == ADR_Engine)
+  case 1:
+    Serial.println("Accessing ECU");
+    if (currAddr != ADR_Engine)
     {
       /////////////////////////////////////////delay(1000) stable passat ecu connection
       delay(1000);
@@ -891,19 +970,25 @@ void loop()
       readSensors(4); // 4-1  Versorgungsspannung[V]  4-2 Kuehlmitteltemp [°C]
       readSensors(5); // 5-1  Motorlast [%]           5-2 Geschwindigkeit [Km/H]
       // readSensors(134); // 134-0 Oeltemp [°C]
-      block = 1;
     }
     break;
   }
-  deltaT = millis() - lastMillis;
-  lastMillis = millis();
-  deltaV = (vehicleSpeed + lastVehicleSpeed) / 2; // durschnittsgeschwindigkeit fuer deltaT
-  lastVehicleSpeed = vehicleSpeed;
 
-
-  if (vehicleSpeed > 0)
+  if (currBlock == 1 && updateLoopsElapsed >= 30)
   {
-    tripDist += (((deltaV * deltaT) / 3600) * distCorrVal);
+    currBlock = 2;
+    updateLoopsElapsed = 0;
   }
+  else if (currBlock == 2 && updateLoopsElapsed >= 5)
+  {
+    currBlock = 1;
+    updateLoopsElapsed = 0;
+  }
+  else
+  {
+    updateLoopsElapsed++;
+  }
+
   updateDisplay();
+  mapDataToI2C();
 }
