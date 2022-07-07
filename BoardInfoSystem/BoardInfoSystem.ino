@@ -64,7 +64,7 @@ void setupDisplay()
   }
   // display.setFont(&FreeSans12pt7b);
   display.setTextSize(1);
-  // display.setRotation(2);
+   display.setRotation(2);
   display.setTextColor(WHITE);
   display.cp437(true);
   displayInfo("VAG:KWP1281");
@@ -215,7 +215,7 @@ void manageWire()
     // displayInfo(String(String(millis()/1000) + " " + String(slave_data.intakeAirTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
     renderScreen();
   }
-  printDataToSerial();
+  //printDataToSerial();
   // displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
 
   slave_config.val = 100;
@@ -248,10 +248,17 @@ void setup()
   Serial.begin(9600); // start serial for output
 }
 
+unsigned long lastLoopTime = 0;
+
 void loop()
 {
-  manageWire();
-  delay(500);
+  if(millis()-lastLoopTime>500){
+    manageWire();
+    lastLoopTime = millis();
+  }
+  //delay(500);
+  handleClick();
+  
 }
 
 void printDataToSerial()
@@ -293,4 +300,39 @@ void switchDisplay()
   }
 
   renderScreen();
+}
+
+bool touchActivated = false;
+unsigned long clickStartTime = 0;
+
+void handleClick(){
+  bool isClicked = (touchRead(15)<50);
+  //Start touch
+  if(isClicked&&!touchActivated){
+    clickStartTime = millis();
+    touchActivated = true;
+    Serial.println("Btn is pressed");
+  }
+
+  //Stop touch
+  if(!isClicked&&touchActivated){
+    Serial.println("Btn stopped to be pressed");
+    if((millis()-clickStartTime)<1000){
+      handleShortClick();
+    }
+    else{
+      handleLongClick();
+    }
+    touchActivated = false;
+    clickStartTime=0;
+    
+  }
+}
+
+void handleShortClick(){
+  Serial.println("SHORT CLICK");
+}
+
+void handleLongClick(){
+  Serial.println("LONG CLICK");
 }
