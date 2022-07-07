@@ -779,7 +779,7 @@ bool readSensors(int group)
         case 2:
           coolantTemp = (int)v;
           break; // OK
-        case 4:
+        case 3:
           intakeAirTemp = (int)v;
           break;
           break;
@@ -817,9 +817,9 @@ bool readSensors(int group)
         case 0:
           vehicleSpeed = v;
           break;
-        case 1:
-          engineSpeed = v;
-          break;
+        // case 1:
+        //   engineSpeed = v;
+        //   break;
         case 2:
           oilPressure = v;
           break;
@@ -839,15 +839,15 @@ bool readSensors(int group)
       case 50:
         switch (idx)
         {
-        case 1:
-          engineSpeed = v;
-          break;
+        // case 1:
+        //   engineSpeed = v;
+        //   break;
         case 2:
           oilTemp = v;
           break;
-        case 3:
-          coolantTemp = v;
-          break;
+        // case 3:
+        //   coolantTemp = v;
+        //   break;
         }
         break;
       }
@@ -910,7 +910,7 @@ void mapDataToI2C()
   slave_data.intakeAirTemp = intakeAirTemp;
   slave_data.oilTemp = oilTemp;
   slave_data.batteryVoltage = int(supplyVoltage * 100);
-  if(engineSpeed>700)
+  if(engineSpeed>1)
     slave_data.isEngineWorking = 1;
   else
     slave_data.isEngineWorking = 0;
