@@ -17,6 +17,8 @@ struct SLAVE_DATA
   //  0: not connected
   //  1: connected
   int16_t connectionStatus = 0;
+  int16_t rpm = 0;
+  int16_t vehicleSpeed = 0;
   int16_t oilTemp = 0;
   int16_t coolantTemp = 0;
   int16_t MAF = 0;
@@ -24,6 +26,7 @@ struct SLAVE_DATA
   int16_t intakeAirTemp = 0;
   int16_t batteryVoltage = 0;
   int16_t isEngineWorking = 0;
+  int16_t fuelLevel = 0;
 };
 
 struct SLAVE_CONFIG
@@ -34,7 +37,7 @@ struct SLAVE_CONFIG
 struct BoardInfoSystemData
 {
   uint16_t engineHours = 0;
-  uint16_t engineMinutes = 0;
+  uint8_t engineMinutes = 0;
   uint8_t lastSelectedScreen = 2;
 };
 
@@ -52,7 +55,6 @@ byte currentScreenType = 2;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 ///
 
-
 //-----------------------Display Module------------------------------//
 void setupDisplay()
 {
@@ -64,7 +66,7 @@ void setupDisplay()
   }
   // display.setFont(&FreeSans12pt7b);
   display.setTextSize(1);
-   display.setRotation(2);
+  //display.setRotation(2);
   display.setTextColor(WHITE);
   display.cp437(true);
   displayInfo("VAG:KWP1281");
@@ -128,21 +130,52 @@ void renderScreen()
 
 void renderScreen1()
 {
-  display.clearDisplay();
 
+  display.clearDisplay();
+  display.drawLine(0, 33, 128, 33, WHITE);
+  display.drawLine(62, 0, 62, 64, WHITE);
   display.setFont();
   display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.println("Conn: " + String(slave_data.connectionStatus));
-  display.println("Coolant");
-  display.setTextSize(2);
-  display.println(slave_data.coolantTemp);
+  display.setCursor(8, 0);
+  display.print("Oil temp"); //+String(slave_data.intakeAirTemp));
+  display.setCursor(68, 0);
+  display.print("Cool temp");
+  display.setCursor(4, 36);
+  display.print("Int. temp");
+  display.setCursor(72, 36);
+  display.print("Fuel lvl");
+  // display.setTextSize(2);
+  display.setCursor(46, 56);
+  display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
 
-  display.setFont(&FreeSans12pt7b);
-  display.setTextSize(1);
-  int shift = 24;
-  display.setCursor(54, shift);
-  display.println("*" + String(slave_data.oilTemp));
+  if (slave_data.connectionStatus == 1)
+  {
+    display.setFont(&FreeSans12pt7b);
+    display.setCursor(12, 30);
+    display.print(slave_data.oilTemp);
+    display.setCursor(76, 30);
+    display.print(slave_data.coolantTemp);
+    display.setCursor(12, 62);
+    display.print(slave_data.intakeAirTemp);
+    display.setCursor(64, 62);
+    display.print(slave_data.fuelLevel);
+  }
+  else if (slave_data.connectionStatus == 0)
+  {
+    display.setFont(&FreeSans12pt7b);
+    display.setCursor(12, 30);
+    display.print("---");
+    display.setCursor(76, 30);
+    display.print("---");
+    display.setCursor(12, 62);
+    display.print("---");
+    display.setCursor(74, 62);
+    display.print("--.--");
+  }
+  // display.setTextSize(1);
+  // int shift = 24;
+  // display.setCursor(59, shift);
+  // display.println("! 123");//+String(slave_data.coolantTemp));
   display.display();
 }
 
@@ -164,7 +197,7 @@ void renderScreen2()
   display.print("Battery");
   // display.setTextSize(2);
   display.setCursor(46, 56);
-  display.print(String(slave_data.diagConnectionStatus)+String(slave_data.connectionStatus)+String(slave_data.isEngineWorking));
+  display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
 
   if (slave_data.connectionStatus == 1)
   {
@@ -199,6 +232,21 @@ void renderScreen2()
 
 void renderScreen3()
 {
+  display.clearDisplay();
+  display.setFont();
+  display.setTextSize(1);
+  display.setCursor(8, 0);
+  display.print("Engine hrs since reset");
+  display.setCursor(4, 36);
+  display.print("Conn. status");
+
+  display.setFont(&FreeSans12pt7b);
+  display.setCursor(12, 30);
+  display.print(String(infoBoardData.engineHours) + " h : " + String(infoBoardData.engineMinutes) + " m");
+  display.setCursor(12, 62);
+  display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
+
+  display.display();
 }
 #pragma endregion
 
@@ -215,8 +263,8 @@ void manageWire()
     // displayInfo(String(String(millis()/1000) + " " + String(slave_data.intakeAirTemp)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.oilTemp), false);
     renderScreen();
   }
-  //printDataToSerial();
-  // displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
+  // printDataToSerial();
+  //  displayInfo(String(String(millis()/1000) + " " + String(slave_data.batteryVoltage/100)), String(slave_data.coolantTemp), String(slave_data.misfireCounter), String(slave_data.batteryVoltage), false);
 
   slave_config.val = 100;
   Wire.beginTransmission(i2c_sensor_slave);
@@ -228,16 +276,16 @@ void manageWire()
 
 #pragma region EEPROM
 byte eepromAddress = 0;
-void setupEEPROMData(){
-  
+void setupEEPROMData()
+{
 }
 
-void updateData(){
-
+void updateData()
+{
 }
 
-void forceWriteData(){
-
+void forceWriteData()
+{
 }
 #pragma endregion
 
@@ -252,13 +300,13 @@ unsigned long lastLoopTime = 0;
 
 void loop()
 {
-  if(millis()-lastLoopTime>500){
+  if (millis() - lastLoopTime > 500)
+  {
     manageWire();
     lastLoopTime = millis();
   }
-  //delay(500);
+  // delay(500);
   handleClick();
-  
 }
 
 void printDataToSerial()
@@ -284,7 +332,7 @@ void printDataToSerial()
   Serial.print("Is engine working ");
   Serial.print(slave_data.isEngineWorking);
   Serial.print("Battery V ");
-  Serial.print(slave_data.batteryVoltage/100.0);
+  Serial.print(slave_data.batteryVoltage / 100.0);
   Serial.println();
 }
 
@@ -305,34 +353,41 @@ void switchDisplay()
 bool touchActivated = false;
 unsigned long clickStartTime = 0;
 
-void handleClick(){
-  bool isClicked = (touchRead(15)<50);
-  //Start touch
-  if(isClicked&&!touchActivated){
+void handleClick()
+{
+  bool isClicked = (touchRead(15) < 10);
+  // Start touch
+  if (isClicked && !touchActivated)
+  {
     clickStartTime = millis();
     touchActivated = true;
     Serial.println("Btn is pressed");
   }
 
-  //Stop touch
-  if(!isClicked&&touchActivated){
+  // Stop touch
+  if (!isClicked && touchActivated)
+  {
     Serial.println("Btn stopped to be pressed");
-    if((millis()-clickStartTime)<1000){
+    if ((millis() - clickStartTime) > 100 && (millis() - clickStartTime) < 1000)
+    {
       handleShortClick();
     }
-    else{
+    else if((millis() - clickStartTime) > 1000)
+    {
       handleLongClick();
     }
     touchActivated = false;
-    clickStartTime=0;
-    
+    clickStartTime = 0;
   }
 }
 
-void handleShortClick(){
+void handleShortClick()
+{
   Serial.println("SHORT CLICK");
+  switchDisplay();
 }
 
-void handleLongClick(){
+void handleLongClick()
+{
   Serial.println("LONG CLICK");
 }
