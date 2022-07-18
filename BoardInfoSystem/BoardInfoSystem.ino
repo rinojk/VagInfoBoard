@@ -45,8 +45,6 @@ SLAVE_DATA slave_data;
 SLAVE_CONFIG slave_config;
 BoardInfoSystemData infoBoardData;
 
-byte currentScreenType = 2;
-
 #pragma region Display
 ///
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -114,15 +112,15 @@ void displayInfo(String text1, String text2, String text3, String mainText, bool
 
 void renderScreen()
 {
-  if (currentScreenType == 1)
+  if (infoBoardData.lastSelectedScreen == 1)
   {
     renderScreen1();
   }
-  else if (currentScreenType == 2)
+  else if (infoBoardData.lastSelectedScreen == 2)
   {
     renderScreen2();
   }
-  else if (currentScreenType == 3)
+  else if (infoBoardData.lastSelectedScreen == 3)
   {
     renderScreen3();
   }
@@ -235,14 +233,14 @@ void renderScreen3()
   display.clearDisplay();
   display.setFont();
   display.setTextSize(1);
-  display.setCursor(8, 0);
-  display.print("Engine hrs since reset");
+  display.setCursor(0, 0);
+  display.print("Engine hours");
   display.setCursor(4, 36);
   display.print("Conn. status");
 
   display.setFont(&FreeSans12pt7b);
   display.setCursor(12, 30);
-  display.print(String(infoBoardData.engineHours) + " h : " + String(infoBoardData.engineMinutes) + " m");
+  display.print(String(infoBoardData.engineHours) + "h:" + String(infoBoardData.engineMinutes) + "m");
   display.setCursor(12, 62);
   display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
 
@@ -278,14 +276,31 @@ void manageWire()
 byte eepromAddress = 0;
 void setupEEPROMData()
 {
+  EEPROM.get(0, infoBoardData);
 }
 
 void updateData()
 {
+  EEPROM.put(0, infoBoardData);
 }
 
 void forceWriteData()
 {
+}
+
+unsigned long lastWrittenEngineHrsMillis = 0;
+void handleEngineHrs(){
+  if(!slave_data.isEngineWorking && (millis() - lastWrittenEngineHrsMillis)>60000){
+    if(infoBoardData.engineMinutes>=59){
+      infoBoardData.engineHours += 1;
+      infoBoardData.engineMinutes = 0;
+    }
+    else{
+      infoBoardData.engineMinutes++;
+    }
+    lastWrittenEngineHrsMillis = millis();
+    updateData();
+  }
 }
 #pragma endregion
 
@@ -294,6 +309,8 @@ void setup()
   Wire.begin(); // join i2c bus (address optional for master)
   setupDisplay();
   Serial.begin(9600); // start serial for output
+  //EEPROM.put(0, infoBoardData);
+  setupEEPROMData();
 }
 
 unsigned long lastLoopTime = 0;
@@ -307,6 +324,8 @@ void loop()
   }
   // delay(500);
   handleClick();
+
+  handleEngineHrs();
 }
 
 void printDataToSerial()
@@ -338,13 +357,13 @@ void printDataToSerial()
 
 void switchDisplay()
 {
-  if (currentScreenType > 3)
+  if (infoBoardData.lastSelectedScreen > 3)
   {
-    currentScreenType = 1;
+    infoBoardData.lastSelectedScreen = 1;
   }
   else
   {
-    currentScreenType++;
+    infoBoardData.lastSelectedScreen++;
   }
 
   renderScreen();
