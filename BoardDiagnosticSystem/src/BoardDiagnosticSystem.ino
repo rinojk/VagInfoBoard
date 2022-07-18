@@ -924,7 +924,7 @@ void mapDataToI2C()
     else
       slave_data.isEngineWorking = 0;
   }
-  //In case of lost connection
+  // In case of lost connection
   else
   {
     slave_data.diagConnectionStatus = 0;

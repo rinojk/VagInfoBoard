@@ -282,10 +282,7 @@ void setupEEPROMData()
 void updateData()
 {
   EEPROM.put(0, infoBoardData);
-}
-
-void forceWriteData()
-{
+  EEPROM.commit();
 }
 
 unsigned long lastWrittenEngineHrsMillis = 0;
@@ -304,29 +301,49 @@ void handleEngineHrs(){
 }
 #pragma endregion
 
-void setup()
-{
-  Wire.begin(); // join i2c bus (address optional for master)
-  setupDisplay();
-  Serial.begin(9600); // start serial for output
-  //EEPROM.put(0, infoBoardData);
-  setupEEPROMData();
-}
+#pragma region Click handlers
+bool touchActivated = false;
+unsigned long clickStartTime = 0;
 
-unsigned long lastLoopTime = 0;
-
-void loop()
+void handleClick()
 {
-  if (millis() - lastLoopTime > 500)
+  bool isClicked = (touchRead(15) < 10);
+  // Start touch
+  if (isClicked && !touchActivated)
   {
-    manageWire();
-    lastLoopTime = millis();
+    clickStartTime = millis();
+    touchActivated = true;
+    Serial.println("Btn is pressed");
   }
-  // delay(500);
-  handleClick();
 
-  handleEngineHrs();
+  // Stop touch
+  if (!isClicked && touchActivated)
+  {
+    Serial.println("Btn stopped to be pressed");
+    if ((millis() - clickStartTime) > 100 && (millis() - clickStartTime) < 1000)
+    {
+      handleShortClick();
+    }
+    else if((millis() - clickStartTime) > 1000)
+    {
+      handleLongClick();
+    }
+    touchActivated = false;
+    clickStartTime = 0;
+  }
 }
+
+void handleShortClick()
+{
+  Serial.println("SHORT CLICK");
+  switchDisplay();
+}
+
+void handleLongClick()
+{
+  Serial.println("LONG CLICK");
+}
+#pragma endregion
 
 void printDataToSerial()
 {
@@ -369,44 +386,26 @@ void switchDisplay()
   renderScreen();
 }
 
-bool touchActivated = false;
-unsigned long clickStartTime = 0;
-
-void handleClick()
+void setup()
 {
-  bool isClicked = (touchRead(15) < 10);
-  // Start touch
-  if (isClicked && !touchActivated)
-  {
-    clickStartTime = millis();
-    touchActivated = true;
-    Serial.println("Btn is pressed");
-  }
-
-  // Stop touch
-  if (!isClicked && touchActivated)
-  {
-    Serial.println("Btn stopped to be pressed");
-    if ((millis() - clickStartTime) > 100 && (millis() - clickStartTime) < 1000)
-    {
-      handleShortClick();
-    }
-    else if((millis() - clickStartTime) > 1000)
-    {
-      handleLongClick();
-    }
-    touchActivated = false;
-    clickStartTime = 0;
-  }
+  Wire.begin(); // join i2c bus (address optional for master)
+  setupDisplay();
+  Serial.begin(9600); // start serial for output
+  //EEPROM.put(0, infoBoardData);
+  setupEEPROMData();
 }
 
-void handleShortClick()
-{
-  Serial.println("SHORT CLICK");
-  switchDisplay();
-}
+unsigned long lastLoopTime = 0;
 
-void handleLongClick()
+void loop()
 {
-  Serial.println("LONG CLICK");
+  if (millis() - lastLoopTime > 500)
+  {
+    manageWire();
+    lastLoopTime = millis();
+  }
+  // delay(500);
+  handleClick();
+
+  handleEngineHrs();
 }
