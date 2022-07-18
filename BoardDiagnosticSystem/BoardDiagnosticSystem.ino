@@ -93,6 +93,8 @@ struct SLAVE_DATA
   //  0: not connected
   //  1: connected
   int16_t connectionStatus = 0;
+  int16_t rpm = 0;
+  int16_t vehicleSpeed = 0;
   int16_t oilTemp = 0;
   int16_t coolantTemp = 0;
   int16_t MAF = 0;
@@ -100,6 +102,7 @@ struct SLAVE_DATA
   int16_t intakeAirTemp = 0;
   int16_t batteryVoltage = 0;
   int16_t isEngineWorking = 0;
+  int16_t fuelLevel = 0;
 };
 
 struct SLAVE_CONFIG
@@ -845,9 +848,9 @@ bool readSensors(int group)
         case 2:
           oilTemp = v;
           break;
-        // case 3:
-        //   coolantTemp = v;
-        //   break;
+          // case 3:
+          //   coolantTemp = v;
+          //   break;
         }
         break;
       }
@@ -894,26 +897,47 @@ void updateDisplay()
 }
 void mapDataToI2C()
 {
-  if (currAddr == ADR_Engine)
-    slave_data.diagConnectionStatus = 1;
-  else if (currAddr == ADR_Dashboard)
-    slave_data.diagConnectionStatus = 2;
+  if (connected)
+  {
+    if (currAddr == ADR_Engine)
+      slave_data.diagConnectionStatus = 1;
+    else if (currAddr == ADR_Dashboard)
+      slave_data.diagConnectionStatus = 2;
+    else
+      slave_data.diagConnectionStatus = 0;
+
+    if (connected == true)
+      slave_data.connectionStatus = 1;
+    else
+      slave_data.connectionStatus = 0;
+
+    slave_data.coolantTemp = coolantTemp;
+    slave_data.intakeAirTemp = intakeAirTemp;
+    slave_data.oilTemp = oilTemp;
+    slave_data.batteryVoltage = int(supplyVoltage * 100);
+    slave_data.fuelLevel = fuelLevel;
+    slave_data.rpm = engineSpeed;
+    slave_data.vehicleSpeed = vehicleSpeed;
+
+    if (engineSpeed > 1)
+      slave_data.isEngineWorking = 1;
+    else
+      slave_data.isEngineWorking = 0;
+  }
+  //In case of lost connection
   else
+  {
     slave_data.diagConnectionStatus = 0;
-
-  if (connected == true)
-    slave_data.connectionStatus = 1;
-  else
     slave_data.connectionStatus = 0;
-
-  slave_data.coolantTemp = coolantTemp;
-  slave_data.intakeAirTemp = intakeAirTemp;
-  slave_data.oilTemp = oilTemp;
-  slave_data.batteryVoltage = int(supplyVoltage * 100);
-  if(engineSpeed>1)
-    slave_data.isEngineWorking = 1;
-  else
+    slave_data.coolantTemp = 0;
+    slave_data.intakeAirTemp = 0;
+    slave_data.oilTemp = 0;
+    slave_data.batteryVoltage = 0;
+    slave_data.fuelLevel = 0;
+    slave_data.rpm = 0;
+    slave_data.vehicleSpeed = 0;
     slave_data.isEngineWorking = 0;
+  }
 }
 
 void setup()
