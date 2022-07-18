@@ -66,7 +66,7 @@ void setupDisplay()
   }
   // display.setFont(&FreeSans12pt7b);
   display.setTextSize(1);
-  display.setRotation(2);
+  //display.setRotation(2);
   display.setTextColor(WHITE);
   display.cp437(true);
   displayInfo("VAG:KWP1281");
@@ -355,7 +355,7 @@ unsigned long clickStartTime = 0;
 
 void handleClick()
 {
-  bool isClicked = (touchRead(15) < 50);
+  bool isClicked = (touchRead(15) < 10);
   // Start touch
   if (isClicked && !touchActivated)
   {
@@ -368,11 +368,11 @@ void handleClick()
   if (!isClicked && touchActivated)
   {
     Serial.println("Btn stopped to be pressed");
-    if ((millis() - clickStartTime) < 1000)
+    if ((millis() - clickStartTime) > 100 && (millis() - clickStartTime) < 1000)
     {
       handleShortClick();
     }
-    else
+    else if((millis() - clickStartTime) > 1000)
     {
       handleLongClick();
     }
