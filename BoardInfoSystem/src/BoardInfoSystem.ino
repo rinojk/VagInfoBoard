@@ -27,6 +27,7 @@ struct SLAVE_DATA
   int16_t batteryVoltage = 0;
   int16_t isEngineWorking = 0;
   int16_t fuelLevel = 0;
+  unsigned long odomoter = 0;
 };
 
 struct SLAVE_CONFIG
@@ -36,9 +37,10 @@ struct SLAVE_CONFIG
 
 struct BoardInfoSystemData
 {
-  uint16_t engineHours = 0;
-  uint8_t engineMinutes = 0;
+  uint16_t engineHours = 1;
+  uint8_t engineMinutes = 1;
   uint8_t lastSelectedScreen = 2;
+  unsigned long initOdometerValue = 0;
 };
 
 SLAVE_DATA slave_data;
@@ -234,15 +236,25 @@ void renderScreen3()
   display.setFont();
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.print("Engine hours");
-  display.setCursor(4, 36);
-  display.print("Conn. status");
+  display.print("Engine hours; "+String(slave_data.odomoter));
+  display.setCursor(2, 36);
+  display.print("Odo");
+  display.setCursor(64, 36);
+  display.print("Avg speed");
 
   display.setFont(&FreeSans12pt7b);
   display.setCursor(12, 30);
   display.print(String(infoBoardData.engineHours) + "h:" + String(infoBoardData.engineMinutes) + "m");
-  display.setCursor(12, 62);
-  display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
+  display.setCursor(2, 62);
+  if(slave_data.odomoter-infoBoardData.initOdometerValue >= 0)
+    display.print(String(slave_data.odomoter-infoBoardData.initOdometerValue));
+  else
+    display.print("---");
+  display.setCursor(64, 62);
+  float avgSpeed = 0.0;
+  if((infoBoardData.engineHours+(infoBoardData.engineMinutes/60.0))>0.0 && (slave_data.odomoter-infoBoardData.initOdometerValue)>=0)
+    avgSpeed = (slave_data.odomoter-infoBoardData.initOdometerValue)/(infoBoardData.engineHours+(infoBoardData.engineMinutes/60.0));
+  display.print(String(avgSpeed));
 
   display.display();
 }
@@ -276,18 +288,21 @@ void manageWire()
 byte eepromAddress = 0;
 void setupEEPROMData()
 {
+  EEPROM.begin(255);
   EEPROM.get(0, infoBoardData);
+  Serial.println(infoBoardData.initOdometerValue);
 }
 
 void updateData()
 {
+  Serial.println("eeprom write");
   EEPROM.put(0, infoBoardData);
   EEPROM.commit();
 }
 
 unsigned long lastWrittenEngineHrsMillis = 0;
 void handleEngineHrs(){
-  if(!slave_data.isEngineWorking && (millis() - lastWrittenEngineHrsMillis)>60000){
+  if(slave_data.isEngineWorking && (millis() - lastWrittenEngineHrsMillis)>60000){
     if(infoBoardData.engineMinutes>=59){
       infoBoardData.engineHours += 1;
       infoBoardData.engineMinutes = 0;
@@ -307,7 +322,7 @@ unsigned long clickStartTime = 0;
 
 void handleClick()
 {
-  bool isClicked = (touchRead(15) < 10);
+  bool isClicked = (touchRead(15) < 30);
   // Start touch
   if (isClicked && !touchActivated)
   {
@@ -342,6 +357,11 @@ void handleShortClick()
 void handleLongClick()
 {
   Serial.println("LONG CLICK");
+
+  infoBoardData.engineHours=0;
+  infoBoardData.engineMinutes=0;
+  infoBoardData.initOdometerValue=slave_data.odomoter;
+  updateData();
 }
 #pragma endregion
 

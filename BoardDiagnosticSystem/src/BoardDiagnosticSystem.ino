@@ -103,6 +103,7 @@ struct SLAVE_DATA
   int16_t batteryVoltage = 0;
   int16_t isEngineWorking = 0;
   int16_t fuelLevel = 0;
+  unsigned long odometer = 0;
 };
 
 struct SLAVE_CONFIG
@@ -918,6 +919,7 @@ void mapDataToI2C()
     slave_data.fuelLevel = fuelLevel;
     slave_data.rpm = engineSpeed;
     slave_data.vehicleSpeed = vehicleSpeed;
+    slave_data.odometer = odometer;
 
     if (engineSpeed > 1)
       slave_data.isEngineWorking = 1;
@@ -937,6 +939,7 @@ void mapDataToI2C()
     slave_data.rpm = 0;
     slave_data.vehicleSpeed = 0;
     slave_data.isEngineWorking = 0;
+    slave_data.odometer = odometer;
   }
 }
 
