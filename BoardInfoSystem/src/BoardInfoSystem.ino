@@ -38,7 +38,7 @@ struct SLAVE_CONFIG
 struct BoardInfoSystemData
 {
   uint16_t engineHours = 1;
-  uint8_t engineMinutes = 1;
+  uint8_t engineMinutes = 2;
   uint8_t lastSelectedScreen = 2;
   unsigned long initOdometerValue = 0;
 };
@@ -69,17 +69,16 @@ void setupDisplay()
   //display.setRotation(2);
   display.setTextColor(WHITE);
   display.cp437(true);
-  displayInfo("VAG:KWP1281");
-}
-
-void displayInfo(String text)
-{
+  
+  
   display.clearDisplay();
 
   display.setFont(&FreeSans12pt7b);
   display.setTextSize(1);
-  display.setCursor(0, 24);
-  display.println(text);
+  display.setCursor(34, 24);
+  display.println("VAG");
+  display.setCursor(12, 56);
+  display.println("KWP1281");
   display.display();
 }
 
@@ -132,8 +131,8 @@ void renderScreen1()
 {
 
   display.clearDisplay();
-  display.drawLine(0, 33, 128, 33, WHITE);
-  display.drawLine(62, 0, 62, 64, WHITE);
+  //display.drawLine(0, 33, 128, 33, WHITE);
+  //display.drawLine(62, 0, 62, 64, WHITE);
   display.setFont();
   display.setTextSize(1);
   display.setCursor(8, 0);
@@ -146,7 +145,7 @@ void renderScreen1()
   display.print("Fuel lvl");
   // display.setTextSize(2);
   display.setCursor(46, 56);
-  display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
+  //display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
 
   if (slave_data.connectionStatus == 1)
   {
@@ -183,8 +182,8 @@ void renderScreen2()
 {
 
   display.clearDisplay();
-  display.drawLine(0, 33, 128, 33, WHITE);
-  display.drawLine(62, 0, 62, 64, WHITE);
+  //display.drawLine(0, 33, 128, 33, WHITE);
+  //display.drawLine(62, 0, 62, 64, WHITE);
   display.setFont();
   display.setTextSize(1);
   display.setCursor(8, 0);
@@ -197,7 +196,7 @@ void renderScreen2()
   display.print("Battery");
   // display.setTextSize(2);
   display.setCursor(46, 56);
-  display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
+  //display.print(String(slave_data.diagConnectionStatus) + String(slave_data.connectionStatus) + String(slave_data.isEngineWorking));
 
   if (slave_data.connectionStatus == 1)
   {
@@ -236,7 +235,7 @@ void renderScreen3()
   display.setFont();
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.print("Engine hours; "+String(slave_data.odomoter));
+  //display.print("Engine hours; ")+String(slave_data.odomoter));
   display.setCursor(2, 36);
   display.print("Odo");
   display.setCursor(64, 36);
@@ -246,7 +245,7 @@ void renderScreen3()
   display.setCursor(12, 30);
   display.print(String(infoBoardData.engineHours) + "h:" + String(infoBoardData.engineMinutes) + "m");
   display.setCursor(2, 62);
-  if(slave_data.odomoter-infoBoardData.initOdometerValue >= 0)
+  if(slave_data.odomoter>100 && slave_data.odomoter-infoBoardData.initOdometerValue >= 0)
     display.print(String(slave_data.odomoter-infoBoardData.initOdometerValue));
   else
     display.print("---");
@@ -339,7 +338,7 @@ void handleClick()
     {
       handleShortClick();
     }
-    else if((millis() - clickStartTime) > 1000)
+    else if((millis() - clickStartTime) > 5000)
     {
       handleLongClick();
     }
