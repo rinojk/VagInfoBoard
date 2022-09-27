@@ -3,12 +3,14 @@
 #include <EEPROM.h>
 #include "Structs.h"
 #include "DisplayManager.h"
+#include "EEPROMmanager.h"
 
 SLAVE_DATA slave_data;
 SLAVE_CONFIG slave_config;
 BoardInfoSystemData infoBoardData;
 
 DisplayManager displayManager;
+EEPROMmanager eepromManager;
 
 #pragma region I2C Master managing
 #define i2c_sensor_slave 17
@@ -36,19 +38,6 @@ void manageWire()
 
 #pragma region EEPROM
 byte eepromAddress = 0;
-void setupEEPROMData()
-{
-  EEPROM.begin(255);
-  EEPROM.get(0, infoBoardData);
-  Serial.println(infoBoardData.initOdometerValue);
-}
-
-void updateData()
-{
-  Serial.println("eeprom write");
-  EEPROM.put(0, infoBoardData);
-  EEPROM.commit();
-}
 
 unsigned long lastWrittenEngineHrsMillis = 0;
 void handleEngineHrs(){
@@ -61,7 +50,7 @@ void handleEngineHrs(){
       infoBoardData.engineMinutes++;
     }
     lastWrittenEngineHrsMillis = millis();
-    updateData();
+    eepromManager.updateData(infoBoardData);
   }
 }
 #pragma endregion
@@ -111,7 +100,7 @@ void handleLongClick()
   infoBoardData.engineHours=0;
   infoBoardData.engineMinutes=0;
   infoBoardData.initOdometerValue=slave_data.odomoter;
-  updateData();
+  eepromManager.updateData(infoBoardData);
 }
 #pragma endregion
 
@@ -162,7 +151,7 @@ void setup()
   displayManager.setupDisplay();
   Serial.begin(9600); // start serial for output
   //EEPROM.put(0, infoBoardData);
-  setupEEPROMData();
+  eepromManager.setupEEPROMData(infoBoardData);
 }
 
 unsigned long lastLoopTime = 0;
